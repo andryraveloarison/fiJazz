@@ -19,7 +19,7 @@ export default function ListePage() {
       <header className="hero">
         <div className="hero-haut">
           <div>
-            <div className="hero-sur">Fihirana FFPM</div>
+            <div className="hero-sur">FFPM</div>
             <h1>Fihirana Jazz</h1>
           </div>
           <Link to="/admin" className="btn-icone" aria-label="Administration"><IcLock size={20} /></Link>
