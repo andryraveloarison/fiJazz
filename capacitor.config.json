@@ -1,0 +1,8 @@
+{
+  "appId": "com.andry.fihiranajazz",
+  "appName": "Fihirana Jazz",
+  "webDir": "dist",
+  "android": {
+    "allowMixedContent": false
+  }
+}

@@ -1,0 +1,17 @@
+# Dépendances & build
+node_modules/
+dist/
+dev-dist/
+
+# Logs & divers
+*.log
+.DS_Store
+
+# Variables d'environnement (ne jamais committer les clés)
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Projet Android généré par Capacitor (créé en CI)
+android/

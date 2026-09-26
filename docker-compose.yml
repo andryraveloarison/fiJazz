@@ -1,0 +1,22 @@
+# ─────────────────────────────────────────────────────────────────────────
+# Fihirana Jazz en développement : serveur Vite avec hot-reload dans un conteneur.
+# La base de données est Supabase (cloud) — configurée via .env (VITE_*).
+#
+#   docker compose up            # démarre le front sur http://localhost:5173
+#   docker compose up --build    # après un changement de dépendances
+# ─────────────────────────────────────────────────────────────────────────
+services:
+  web:
+    build:
+      context: .
+      target: dev
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env
+    volumes:
+      # Code monté en direct pour le hot-reload…
+      - .:/app
+      # …mais on garde le node_modules du conteneur (évite les conflits d'archi).
+      - /app/node_modules
+    restart: unless-stopped

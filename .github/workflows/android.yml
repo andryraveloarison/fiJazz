@@ -1,0 +1,68 @@
+# Build de l'APK Android (Capacitor) à chaque push sur main.
+#   • L'APK est téléchargeable dans l'onglet Actions (artifact « fihirana-jazz-apk »)
+#   • et publié en Release (onglet Releases). Lien direct toujours à jour :
+#     https://github.com/<user>/fihirana-jazz/releases/latest/download/fihirana-jazz.apk
+#
+# Prérequis : secrets du repo (Settings → Secrets and variables → Actions)
+#   VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Dépendances
+        run: npm ci
+
+      - name: Build web
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+      - name: Projet Android (Capacitor)
+        run: |
+          npx cap add android
+          npx capacitor-assets generate --android
+          npx cap sync android
+
+      - name: Build APK
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+          mv app/build/outputs/apk/debug/app-debug.apk ../fihirana-jazz.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fihirana-jazz-apk
+          path: fihirana-jazz.apk
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: Fihirana Jazz — build ${{ github.run_number }}
+          body: APK construit automatiquement depuis le commit ${{ github.sha }}.
+          files: fihirana-jazz.apk
+          make_latest: true
