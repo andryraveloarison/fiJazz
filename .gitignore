@@ -15,3 +15,4 @@ dev-dist/
 
 # Projet Android généré par Capacitor (créé en CI)
 android/
+!.env.production
