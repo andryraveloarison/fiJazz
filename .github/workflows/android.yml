@@ -1,7 +1,7 @@
 # Build de l'APK Android (Capacitor) à chaque push sur main.
 #   • L'APK est téléchargeable dans l'onglet Actions (artifact « fihirana-jazz-apk »)
 #   • et publié en Release (onglet Releases). Lien direct toujours à jour :
-#     https://github.com/<user>/fihirana-jazz/releases/latest/download/fihirana-jazz.apk
+#     https://github.com/andryraveloarison/fiJazz/releases/latest/download/fihirana-jazz.apk
 #
 # Prérequis : secrets du repo (Settings → Secrets and variables → Actions)
 #   VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY

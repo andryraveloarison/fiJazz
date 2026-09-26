@@ -26,9 +26,9 @@ docker compose up         # http://localhost:5173
 
 ## 3. APK via GitHub
 
-1. Créer le repo `fihirana-jazz` sur GitHub et pousser :
+1. Créer le repo `fiJazz` sur GitHub et pousser :
    ```bash
-   git remote add origin git@github.com:<user>/fihirana-jazz.git
+   git remote add origin git@github.com:andryraveloarison/fiJazz.git
    git push -u origin main
    ```
 2. Repo → Settings → Secrets and variables → Actions → ajouter
@@ -36,7 +36,7 @@ docker compose up         # http://localhost:5173
 3. Chaque push sur `main` lance le workflow **Android APK** (`.github/workflows/android.yml`) :
    l'APK est dans l'onglet **Actions** (artifact) et dans **Releases**.
    Lien direct vers la dernière version :
-   `https://github.com/<user>/fihirana-jazz/releases/latest/download/fihirana-jazz.apk`
+   `https://github.com/andryraveloarison/fiJazz/releases/latest/download/fihirana-jazz.apk`
 
 Le dossier `android/` n'est pas commité : il est généré en CI (`cap add android`).
 Icônes : `assets/*.png` générés depuis `public/logo.svg` via `npm run icons`.
