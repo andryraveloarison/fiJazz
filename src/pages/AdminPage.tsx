@@ -93,7 +93,7 @@ function Gestion({ onExpire }: { onExpire: () => void }) {
     <>
       <FormAjout onAjout={(t, n, f) => action(() => ajouterChant(t, n, f))} />
       {erreur && <div className="erreur">{erreur}</div>}
-      <h2 className="section">Chants ({chants.length})</h2>
+      <h2 className="section">Titre ({chants.length})</h2>
       <ul className="liste">
         {chants.map((c) => (
           <LigneAdmin
