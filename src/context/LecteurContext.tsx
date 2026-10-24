@@ -1,7 +1,7 @@
 // État partagé : liste des chants + lecteur audio unique (un seul <audio>).
 // À la fin d'un chant, on enchaîne automatiquement sur le suivant.
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { Chant } from '../types'
+import { nomCategorie, type Chant } from '../types'
 import { dbReady, listerChants, urlAudio } from '../lib/supabase'
 
 interface Lecteur {
@@ -65,8 +65,10 @@ export function LecteurProvider({ children }: { children: ReactNode }) {
     a.play().catch(() => setEnLecture(false))
   }, [])
 
+  // Précédent / suivant restent dans la catégorie du chant en cours.
   const decaler = useCallback((pas: number) => {
-    const liste = chantsRef.current
+    const cat = courantRef.current?.categorie
+    const liste = cat ? chantsRef.current.filter((c) => c.categorie === cat) : chantsRef.current
     if (!liste.length) return
     const i = liste.findIndex((c) => c.id === courantRef.current?.id)
     const j = i < 0 ? 0 : (i + pas + liste.length) % liste.length
@@ -124,7 +126,7 @@ export function LecteurProvider({ children }: { children: ReactNode }) {
     if (!('mediaSession' in navigator)) return
     const ms = navigator.mediaSession
     ms.metadata = courant
-      ? new MediaMetadata({ title: courant.titre, artist: 'Fihirana FFPM — Jazz', album: 'Fihirana Jazz' })
+      ? new MediaMetadata({ title: courant.titre, artist: `${nomCategorie(courant.categorie)} — Jazz`, album: 'Fihirana Jazz' })
       : null
     ms.setActionHandler('play', basculer)
     ms.setActionHandler('pause', basculer)

@@ -87,6 +87,16 @@ button:disabled { opacity: .5; cursor: default; }
 }
 .recherche input::placeholder { color: rgba(255, 255, 255, .5); }
 
+.onglets { margin-top: 12px; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.onglets::-webkit-scrollbar { display: none; }
+.onglet {
+  flex-shrink: 0; white-space: nowrap;
+  padding: 8px 14px; border-radius: 999px;
+  background: rgba(255, 255, 255, .1); color: rgba(255, 255, 255, .75);
+  font-size: 13px; font-weight: 600;
+}
+.onglet.actif { background: var(--brass); color: var(--night); }
+
 /* ── Contenu ─────────────────────────────────────────────────────────── */
 .contenu { padding: 18px 16px; }
 .vide { text-align: center; color: var(--muted); padding: 40px 10px; }
@@ -157,7 +167,8 @@ button:disabled { opacity: .5; cursor: default; }
   background: var(--card); border-radius: var(--radius-sm);
   padding: 8px 8px 8px 12px; box-shadow: var(--shadow);
 }
-.admin-ligne.edition { padding: 8px; gap: 6px; }
+.admin-ligne.edition { padding: 8px; gap: 6px; flex-direction: column; align-items: stretch; }
+.admin-ligne.edition .ligne { gap: 6px; align-items: center; }
 .admin-ligne.edition .champ { padding: 10px; }
 .admin-ligne.edition .champ.num { flex-basis: 56px; }
 

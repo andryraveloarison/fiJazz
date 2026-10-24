@@ -1,5 +1,5 @@
 // Espace admin protégé par mot de passe (vérifié côté Postgres) :
-// ajouter un chant (titre + fichier audio), modifier le titre, supprimer.
+// ajouter un chant (catégorie + titre + fichier audio), modifier, supprimer.
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { useLecteur } from '../context/LecteurContext'
@@ -7,7 +7,15 @@ import {
   ajouterChant, connecterAdmin, deconnecterAdmin, getMdpAdmin, modifierChant, supprimerChant,
 } from '../lib/supabase'
 import { IcBack, IcCheck, IcClose, IcDelete, IcEdit, IcLogout, IcUpload } from '../lib/icons'
-import type { Chant } from '../types'
+import { CATEGORIES, type Categorie, type Chant } from '../types'
+
+function ChoixCategorie({ valeur, onChange }: { valeur: Categorie; onChange: (c: Categorie) => void }) {
+  return (
+    <select className="champ" value={valeur} onChange={(e) => onChange(e.target.value as Categorie)}>
+      {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+    </select>
+  )
+}
 
 function versNumero(s: string): number | null {
   const n = parseInt(s, 10)
@@ -91,27 +99,37 @@ function Gestion({ onExpire }: { onExpire: () => void }) {
 
   return (
     <>
-      <FormAjout onAjout={(t, n, f) => action(() => ajouterChant(t, n, f))} />
+      <FormAjout onAjout={(t, n, cat, f) => action(() => ajouterChant(t, n, cat, f))} />
       {erreur && <div className="erreur">{erreur}</div>}
-      <h2 className="section">Titre ({chants.length})</h2>
-      <ul className="liste">
-        {chants.map((c) => (
-          <LigneAdmin
-            key={c.id}
-            chant={c}
-            onModif={(t, n) => action(() => modifierChant(c.id, t, n))}
-            onSuppr={() => action(async () => {
-              if (courant?.id === c.id) arreter()
-              await supprimerChant(c.id)
-            })}
-          />
-        ))}
-      </ul>
+      {CATEGORIES.map((cat) => {
+        const liste = chants.filter((c) => c.categorie === cat.id)
+        return (
+          <section key={cat.id}>
+            <h2 className="section">{cat.nom} ({liste.length})</h2>
+            <ul className="liste">
+              {liste.map((c) => (
+                <LigneAdmin
+                  key={c.id}
+                  chant={c}
+                  onModif={(t, n, k) => action(() => modifierChant(c.id, t, n, k))}
+                  onSuppr={() => action(async () => {
+                    if (courant?.id === c.id) arreter()
+                    await supprimerChant(c.id)
+                  })}
+                />
+              ))}
+            </ul>
+          </section>
+        )
+      })}
     </>
   )
 }
 
-function FormAjout({ onAjout }: { onAjout: (titre: string, numero: number | null, f: File) => Promise<void> }) {
+function FormAjout({ onAjout }: {
+  onAjout: (titre: string, numero: number | null, categorie: Categorie, f: File) => Promise<void>
+}) {
+  const [categorie, setCategorie] = useState<Categorie>('ffpm')
   const [titre, setTitre] = useState('')
   const [numero, setNumero] = useState('')
   const [fichier, setFichier] = useState<File | null>(null)
@@ -123,7 +141,7 @@ function FormAjout({ onAjout }: { onAjout: (titre: string, numero: number | null
     if (!fichier || !titre.trim()) return
     setEnvoi(true)
     try {
-      await onAjout(titre, versNumero(numero), fichier)
+      await onAjout(titre, versNumero(numero), categorie, fichier)
       setTitre(''); setNumero(''); setFichier(null); setCle((k) => k + 1)
     } catch { /* erreur affichée par le parent */ } finally {
       setEnvoi(false)
@@ -133,6 +151,7 @@ function FormAjout({ onAjout }: { onAjout: (titre: string, numero: number | null
   return (
     <form className="carte" onSubmit={valider}>
       <h2>Ajouter un chant</h2>
+      <ChoixCategorie valeur={categorie} onChange={setCategorie} />
       <div className="ligne">
         <input
           className="champ num" inputMode="numeric" placeholder="N°"
@@ -154,12 +173,13 @@ function FormAjout({ onAjout }: { onAjout: (titre: string, numero: number | null
 
 function LigneAdmin({ chant, onModif, onSuppr }: {
   chant: Chant
-  onModif: (titre: string, numero: number | null) => Promise<void>
+  onModif: (titre: string, numero: number | null, categorie: Categorie) => Promise<void>
   onSuppr: () => Promise<void>
 }) {
   const [edition, setEdition] = useState(false)
   const [titre, setTitre] = useState(chant.titre)
   const [numero, setNumero] = useState(chant.numero?.toString() ?? '')
+  const [categorie, setCategorie] = useState<Categorie>(chant.categorie)
   const [occupe, setOccupe] = useState(false)
 
   async function run(fn: () => Promise<void>) {
@@ -170,20 +190,26 @@ function LigneAdmin({ chant, onModif, onSuppr }: {
   if (edition) {
     return (
       <li className="admin-ligne edition">
-        <input
-          className="champ num" inputMode="numeric" placeholder="N°"
-          value={numero} onChange={(e) => setNumero(e.target.value.replace(/\D/g, ''))}
-        />
-        <input className="champ" value={titre} onChange={(e) => setTitre(e.target.value)} autoFocus />
-        <button className="btn-icone ok" disabled={occupe || !titre.trim()} aria-label="Enregistrer"
-          onClick={() => run(() => onModif(titre, versNumero(numero)))}>
-          <IcCheck size={18} />
-        </button>
-        <button className="btn-icone" aria-label="Annuler" onClick={() => {
-          setEdition(false); setTitre(chant.titre); setNumero(chant.numero?.toString() ?? '')
-        }}>
-          <IcClose size={18} />
-        </button>
+        <div className="ligne">
+          <input
+            className="champ num" inputMode="numeric" placeholder="N°"
+            value={numero} onChange={(e) => setNumero(e.target.value.replace(/\D/g, ''))}
+          />
+          <input className="champ" value={titre} onChange={(e) => setTitre(e.target.value)} autoFocus />
+        </div>
+        <div className="ligne">
+          <ChoixCategorie valeur={categorie} onChange={setCategorie} />
+          <button className="btn-icone ok" disabled={occupe || !titre.trim()} aria-label="Enregistrer"
+            onClick={() => run(() => onModif(titre, versNumero(numero), categorie))}>
+            <IcCheck size={18} />
+          </button>
+          <button className="btn-icone" aria-label="Annuler" onClick={() => {
+            setEdition(false); setTitre(chant.titre); setNumero(chant.numero?.toString() ?? '')
+            setCategorie(chant.categorie)
+          }}>
+            <IcClose size={18} />
+          </button>
+        </div>
       </li>
     )
   }

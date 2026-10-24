@@ -2,7 +2,8 @@
 -- Fihirana Jazz — schéma Supabase (idempotent : peut être ré-exécuté).
 -- À exécuter dans Supabase → SQL Editor.
 --
---   • chants        : liste des cantiques (lecture publique).
+--   • chants        : liste des cantiques (lecture publique), classés par
+--                     catégorie : ffpm | fanampiny | antema.
 --   • chant_admin   : hash bcrypt du mot de passe admin (RLS sans policy →
 --                     jamais lisible directement, seulement via les RPC).
 --   • Écritures sur `chants` UNIQUEMENT via les RPC chant_* qui vérifient
@@ -18,11 +19,19 @@ create extension if not exists pgcrypto with schema extensions;
 -- ── Tables ───────────────────────────────────────────────────────────────
 create table if not exists public.chants (
   id          uuid primary key default gen_random_uuid(),
-  numero      integer,                 -- numéro FFPM (optionnel)
+  numero      integer,                 -- numéro dans le recueil (optionnel)
   titre       text not null,
+  categorie   text not null default 'ffpm',
   audio_path  text not null,           -- chemin dans le bucket `chants`
   created_at  timestamptz not null default now()
 );
+
+-- Migration : ajoute la catégorie aux bases existantes (les chants déjà
+-- présents deviennent FFPM via le default).
+alter table public.chants add column if not exists categorie text not null default 'ffpm';
+alter table public.chants drop constraint if exists chants_categorie_check;
+alter table public.chants add constraint chants_categorie_check
+  check (categorie in ('ffpm', 'fanampiny', 'antema'));
 
 create table if not exists public.chant_admin (
   id        integer primary key default 1 check (id = 1),
@@ -42,6 +51,10 @@ create policy "chants_lecture" on public.chants
   for select to anon, authenticated using (true);
 
 -- ── RPC admin (SECURITY DEFINER : contournent la RLS après vérif du mdp) ──
+-- Anciennes signatures (sans catégorie) : supprimées pour éviter les surcharges.
+drop function if exists public.chant_ajouter(text, text, integer, text);
+drop function if exists public.chant_modifier(text, uuid, text, integer);
+
 create or replace function public.chant_verifier(p_mdp text)
 returns boolean
 language sql security definer set search_path = public, extensions
@@ -52,7 +65,7 @@ as $$
   );
 $$;
 
-create or replace function public.chant_ajouter(p_mdp text, p_titre text, p_numero integer, p_audio_path text)
+create or replace function public.chant_ajouter(p_mdp text, p_titre text, p_numero integer, p_categorie text, p_audio_path text)
 returns public.chants
 language plpgsql security definer set search_path = public, extensions
 as $$
@@ -60,14 +73,14 @@ declare r chants;
 begin
   if not chant_verifier(p_mdp) then raise exception 'Mot de passe incorrect'; end if;
   if coalesce(trim(p_titre), '') = '' then raise exception 'Titre obligatoire'; end if;
-  insert into chants (titre, numero, audio_path)
-  values (trim(p_titre), p_numero, p_audio_path)
+  insert into chants (titre, numero, categorie, audio_path)
+  values (trim(p_titre), p_numero, coalesce(p_categorie, 'ffpm'), p_audio_path)
   returning * into r;
   return r;
 end;
 $$;
 
-create or replace function public.chant_modifier(p_mdp text, p_id uuid, p_titre text, p_numero integer)
+create or replace function public.chant_modifier(p_mdp text, p_id uuid, p_titre text, p_numero integer, p_categorie text)
 returns public.chants
 language plpgsql security definer set search_path = public, extensions
 as $$
@@ -75,7 +88,7 @@ declare r chants;
 begin
   if not chant_verifier(p_mdp) then raise exception 'Mot de passe incorrect'; end if;
   if coalesce(trim(p_titre), '') = '' then raise exception 'Titre obligatoire'; end if;
-  update chants set titre = trim(p_titre), numero = p_numero
+  update chants set titre = trim(p_titre), numero = p_numero, categorie = coalesce(p_categorie, categorie)
   where id = p_id
   returning * into r;
   return r;
@@ -96,12 +109,12 @@ end;
 $$;
 
 revoke all on function public.chant_verifier(text)                        from public;
-revoke all on function public.chant_ajouter(text, text, integer, text)     from public;
-revoke all on function public.chant_modifier(text, uuid, text, integer)    from public;
+revoke all on function public.chant_ajouter(text, text, integer, text, text) from public;
+revoke all on function public.chant_modifier(text, uuid, text, integer, text) from public;
 revoke all on function public.chant_supprimer(text, uuid)                  from public;
 grant execute on function public.chant_verifier(text)                     to anon, authenticated;
-grant execute on function public.chant_ajouter(text, text, integer, text)  to anon, authenticated;
-grant execute on function public.chant_modifier(text, uuid, text, integer) to anon, authenticated;
+grant execute on function public.chant_ajouter(text, text, integer, text, text)  to anon, authenticated;
+grant execute on function public.chant_modifier(text, uuid, text, integer, text) to anon, authenticated;
 grant execute on function public.chant_supprimer(text, uuid)               to anon, authenticated;
 
 -- ── Storage : bucket public pour les fichiers audio ──────────────────────

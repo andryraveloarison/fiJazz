@@ -4,7 +4,7 @@
 // via les RPC chant_* qui vérifient le mot de passe admin côté Postgres.
 // Les fichiers audio sont dans le bucket Storage public `chants`.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { Chant } from '../types'
+import type { Categorie, Chant } from '../types'
 
 const url = import.meta.env.VITE_SUPABASE_URL
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
@@ -76,7 +76,9 @@ function nomFichier(f: File): string {
   return `${crypto.randomUUID()}.${ext}`
 }
 
-export async function ajouterChant(titre: string, numero: number | null, fichier: File): Promise<Chant> {
+export async function ajouterChant(
+  titre: string, numero: number | null, categorie: Categorie, fichier: File,
+): Promise<Chant> {
   const m = mdp()
   const path = nomFichier(fichier)
   const up = await db().storage.from(BUCKET).upload(path, fichier, {
@@ -85,7 +87,7 @@ export async function ajouterChant(titre: string, numero: number | null, fichier
   })
   if (up.error) throw new Error(`Envoi du fichier échoué : ${up.error.message}`)
   const { data, error } = await db().rpc('chant_ajouter', {
-    p_mdp: m, p_titre: titre, p_numero: numero, p_audio_path: path,
+    p_mdp: m, p_titre: titre, p_numero: numero, p_categorie: categorie, p_audio_path: path,
   })
   if (error) {
     await db().storage.from(BUCKET).remove([path]) // pas de fichier orphelin
@@ -94,9 +96,11 @@ export async function ajouterChant(titre: string, numero: number | null, fichier
   return data as Chant
 }
 
-export async function modifierChant(id: string, titre: string, numero: number | null): Promise<Chant> {
+export async function modifierChant(
+  id: string, titre: string, numero: number | null, categorie: Categorie,
+): Promise<Chant> {
   const { data, error } = await db().rpc('chant_modifier', {
-    p_mdp: mdp(), p_id: id, p_titre: titre, p_numero: numero,
+    p_mdp: mdp(), p_id: id, p_titre: titre, p_numero: numero, p_categorie: categorie,
   })
   if (error) throw asError(error, 'Modification impossible.')
   return data as Chant

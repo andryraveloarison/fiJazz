@@ -43,8 +43,12 @@ Icônes : `assets/*.png` générés depuis `public/logo.svg` via `npm run icons`
 
 ## Admin
 
-Icône cadenas en haut à droite → mot de passe → ajouter un chant (n° FFPM optionnel, titre,
-fichier audio), modifier le titre/numéro (crayon), supprimer (corbeille).
+Icône cadenas en haut à droite → mot de passe → ajouter un chant (catégorie **FFPM**,
+**Fihirana fanampiny** ou **Antema**, n° optionnel, titre, fichier audio), modifier
+titre/numéro/catégorie (crayon), supprimer (corbeille). Dans l'app, des onglets filtrent par catégorie.
+
+Base existante : ré-exécuter `sql/schema.sql` ajoute la colonne `categorie`
+(les chants déjà présents passent en FFPM).
 
 ⚠️ Sans Supabase Auth, l'upload/suppression de **fichiers** dans le bucket est ouvert au rôle
 anon ; seule la **table** `chants` est protégée par le mot de passe.
